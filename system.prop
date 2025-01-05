@@ -1,11 +1,9 @@
 #################
 # 触摸屏优化
-#################
 # 提高全局触摸屏响应
 debug.performance.tuning=1
 #################
 # 画面显示优化
-#################
 # 关闭 HW 叠加层
 debug.sf.hw=1
 # 开启硬件加速
@@ -18,9 +16,11 @@ debug.hwui.disable_vsync=true
 debug.sf.latch_unsignaled=1
 # 禁用垂直同步
 hwui.disable_vsync=true
+# 支持高刷（适用于MIUI）
+ro.vendor.dfps.enable=false
+ro.vendor.smart_dfps.enable=false
 #################
 # 系统优化
-#################
 # 默认关闭定位（免得不必要的耗电）
 ro.gps.agps_provider=0
 # 开启 SDCard 性能优化
@@ -57,29 +57,12 @@ persist.mm.enable.prefetch=false
 log.tag.stats_log=OFF
 ro.logd.size=64K
 ro.logd.size.stats=64K
-# 系统自带媒体增强
-media.aac_51_output_enabled=true
-media.stagefright.enable-player=true
-media.stagefright.enable-meta=true
-media.stagefright.enable-scan=true
-media.stagefright.enable-http=true
-media.stagefright.enable-fma2dp=true
-media.stagefright.enable-scan=true
-media.swhevccodectype=0
-media.hwhevccodectype=0
-mmp.enable.3g2=true
-mm.enable.smoothstreaming=true
-mm.disable.sec_smoothstreaming=true
-ro.vendor.audio.voice.change.support=true
-# 支持高刷（适用于MIUI）
-ro.vendor.dfps.enable=false
-ro.vendor.smart_dfps.enable=false
-# 内存优化
-app_memory_compression=0
-debug.gralloc.enable_fb_ubwc=1
-persist.sys.purgeable_assets=1
-zram_enabled=0
+# 关闭日志缓存
+debug.atrace.tags.enableflags=0
+persist.sys.oplus.opm.logstart=false
+persist.sys.log.user=0
+persist.sys.log.lfeh=false
+persist.sys.log.cache=false
+persist.bt.iot.enablelogging=false
 # CPU 优化
 ro.sf.disable_triple_buffer=0
-# 开启硬件加速
-video.accelerate.hw=1

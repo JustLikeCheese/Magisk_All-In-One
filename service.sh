@@ -7,7 +7,7 @@
 
 # 循环判断是否开机
 while [ "$(getprop sys.boot_completed)" != "1" ]; do
-    sleep 1
+    sleep 2
 done
 # 创建用于文件权限测试的文件
 test_file="/sdcard/Android/.PERMISSION_TEST"
@@ -16,19 +16,15 @@ true >"$test_file"
 # 判断是否有权限
 while [ ! -f "$test_file" ]; do
     true > "$test_file"
-    sleep 1
+    sleep 2
 done
 # 删除测试文件
-rm "$test_file"
+rm -f "$test_file"
 
 
 # 定义配置文件路径和日志文件路径
 CONFIG_FILE="/storage/emulated/0/Android/config.yaml"
 LOG_FILE="/storage/emulated/0/Android/config.yaml.log"
-# 定义 module_log 输出日志函数
-module_log() {
-  echo "[$(date '+%m-%d %H:%M:%S.%3N')] $1" >> $LOG_FILE
-}
 # 定义 read_config 读取配置函数，若找不到匹配项，则返回默认值
 read_config() {
   result=$(awk -v start="$1" '
@@ -48,11 +44,10 @@ read_config() {
 
 # 读取 config.yaml 配置
 
-# 获取性能模式
-# 0: 性能优先
-# 1: 省电优先
-# 2: 超级省电
+# 性能模式
 PERFORMANCE=$(read_config "性能调节 " "0")
+# 负载均衡
+SCHEDTUNE=$(read_config "负载均衡 " "0")
 
 # 获取 CPU 应用分配
 BACKGROUND=$(read_config "用户后台应用 " "0-1")
@@ -63,10 +58,14 @@ SYSTEM_FOREGROUND=$(read_config "上层应用 " "0-7")
 # 其他选项
 # 王者荣耀游戏优化
 OPTIMIZE_WZRY=$(read_config "王者优化 " "0")
+# 获取内存优化配置
+OPTIMIZE_ZRAM=$(read_config "内存优化 " "0")
 # TCP 网络优化
 OPTIMIZE_TCP=$(read_config "TCP网络优化 " "1")
+# 快充优化
+OPTIMIZE_CHARGE=$(read_config "快充优化 " "1")
 # 移除小米更新验证
-OPTIMIZE_MIUI_OTA=$(read_config "移除小米更新验证 " "1")
+OPTIMIZE_MIUI_OTA=$(read_config "移除小米更新验证 " "0")
 # 模块日志输出
 OPTIMIZE_MODULE=$(read_config "模块日志输出 " "0")
 
@@ -75,95 +74,32 @@ OPTIMIZE_MODULE=$(read_config "模块日志输出 " "0")
 SCHED_DOWNMIGRATE=$(read_config "大核调度 " "40 40")
 # 小核 提高这个值有利于降低功耗，不利于性能。
 SCHED_UPMIGRATE=$(read_config "小核调度 " "60 60")
-# 大核调度状态
-[ "$SCHED_DOWNMIGRATE" != "none" ] && SCHED_DOWN_STATUS="（自定义）" || SCHED_DOWN_STATUS="（预设）"
-# 小核调度状态
-[ "$SCHED_UPMIGRATE" != "none" ] && SCHED_UP_STATUS="（自定义）" || SCHED_UP_STATUS="（预设）"
-# CPU 调度模式 SCALING
-CPU_SCALING="performance"
 
 # 调整模块日志输出
-# Ciallo～ (∠・ω< )⌒☆ Only
-if [ "$OPTIMIZE_MODULE" == "0" ]; then
+if [ $OPTIMIZE_MODULE == "0" ] || [ $OPTIMIZE_MODULE == "1" ]; then
   # 判断日志文件是否为已创建
   # 已创建则在文件末尾添加换行
-  [ -f $LOG_FILE ] && echo "" >> $LOG_FILE
-else
+  [ -f $LOG_FILE ] && echo "" >> $LOG_FILE;
+elif [ $OPTIMIZE_MODULE == "3" ]; then
+  # 重定向日志路径到 /dev/null
   LOG_FILE = "/dev/null"
 fi
+
+# 定义 module_log 输出日志函数
+module_log() {
+  if [ $OPTIMIZE_MODULE == "3" ]; then return; fi
+  if [ $OPTIMIZE_MODULE == "2" ] && [ "$1" != Ciallo* ]; then return; fi
+  echo "[$(date '+%m-%d %H:%M:%S.%3N')] $1" >> $LOG_FILE
+}
 
 # 输出日志
 module_log "开机完成，正在读取 config.yaml 配置.."
 
-# 判断是否为养老模式
-if [ "$PERFORMANCE" == "3" ]; then
-  module_log "当前模式: 养老模式（$PERFORMANCE）"
-  module_log "将禁用 CPU / GPU 调度"
-  # 如果用户自定义了 “其他选项”的“大小核”配置
-  # 则设置大小核为用户自定义的配置
-  if ! [ "$SCHED_DOWNMIGRATE" == "none" ]; then
-    echo $SCHED_DOWNMIGRATE > /proc/sys/kernel/sched_downmigrate
-    module_log "- CPU 大核分配（自定义配置）: $SCHED_DOWNMIGRATE"
-  fi
-  if ! [ "$SCHED_UPMIGRATE" == "none" ]; then
-    echo $SCHED_UPMIGRATE > /proc/sys/kernel/sched_upmigrate
-    module_log "- CPU 小核分配（自定义配置）: $SCHED_UPMIGRATE"
-  fi
-elif [ "$PERFORMANCE" == "2" ]; then
-  # 判断是否为超级省电模式
-  # 超级省电模式会限制性能释放
-  module_log "当前模式: 超级省电（$PERFORMANCE）"
-  # 设置 CPU 调度模式为 POWERSAVE
-  CPU_SCALING="powersave"
-  # 限制用户后台应用
-  BACKGROUND="0"
-  # 限制系统后台应用
-  SYSTEM_BACKGROUND=""
-  # 限制用户前台应用
-  FOREGROUND="0-7"
-  # 限制用户悬浮窗应用
-  SYSTEM_FOREGROUND="6-7"
-  # 大核 提高这个值有利于性能，不利于降低功耗。
-  [ "$SCHED_DOWNMIGRATE" == "none" ] && SCHED_DOWNMIGRATE="30 30"
-  # 小核 提高这个值有利于降低功耗，不利于性能。
-  [ "$SCHED_UPMIGRATE" == "none" ] && SCHED_UPMIGRATE="70 70"
-  module_log "已限制用户/系统应用后台运行"
-elif [ "$PERFORMANCE" == "1" ]; then
-  # 判断是否为省电优先
-  # 大核 提高这个值有利于性能，不利于降低功耗。
-  [ "$SCHED_DOWNMIGRATE" == "none" ] && SCHED_DOWNMIGRATE="30 30"
-  # 小核 提高这个值有利于降低功耗，不利于性能。
-  [ "$SCHED_UPMIGRATE" == "none" ] && SCHED_UPMIGRATE="70 70"
-  CPU_SCALING="ondemand"
-  module_log "当前模式: 省电优先（$PERFORMANCE）"
-else
-  # 判断是否为性能优先
-  PERFORMANCE="0"
-  # 启用所有离线的 CPU
-  for cpu in /sys/devices/system/cpu/cpu*/online; do
-    [ "$(cat "$cpu")" == 0 ] && echo 1 > "$cpu"
-  done
-  # 大核 提高这个值有利于性能，不利于降低功耗。
-  [ "$SCHED_DOWNMIGRATE" == "none" ] && SCHED_DOWNMIGRATE="40 40"
-  # 小核 提高这个值有利于降低功耗，不利于性能。
-  [ "$SCHED_UPMIGRATE" == "none" ] && SCHED_UPMIGRATE="60 60"
+
+# 优化 CPU 核心分配
+if [ "$PERFORMANCE" == "0" ]; then
+  # 输出日志
   module_log "当前模式: 性能优先（$PERFORMANCE）"
-fi
-
-
-# 调节 CPU 激进度百分比%
-# 前台的应用（100%会把cpu拉满）
-# echo "10" > /dev/stune/foreground/schedtune.boost
-# 显示在上层的应用
-# echo "0" > /dev/stune/top-app/schedtune.boost
-# 用户的后台应用（减少cpu乱跳，省电）
-# echo "0" > /dev/stune/background/schedtune.boost
-
-
-
-# 核心分配优化
-# 如果不为养老模式
-if [ "$PERFORMANCE" != "3" ]; then
   # 设置 CPU 应用分配
   # 用户后台应用
   echo $BACKGROUND > /dev/cpuset/background/cpus
@@ -174,34 +110,32 @@ if [ "$PERFORMANCE" != "3" ]; then
   # 上层应用
   echo $SYSTEM_FOREGROUND > /dev/cpuset/top-app/cpus
 
-  module_log "正在设置 CPU 应用分配"
-  module_log "- 用户的后台应用: $BACKGROUND"
-  module_log "- 系统的后台应用: $SYSTEM_BACKGROUND"
-  module_log "- 前台应用: $FOREGROUND"
-  module_log "- 上层应用: $SYSTEM_FOREGROUND"
+  # 输出日志
+  if [ $OPTIMIZE_MODULE == "0" ]; then
+    module_log "正在设置 CPU 应用分配"
+    module_log "- 用户的后台应用: $BACKGROUND"
+    module_log "- 系统的后台应用: $SYSTEM_BACKGROUND"
+    module_log "- 前台应用: $FOREGROUND"
+    module_log "- 上层应用: $SYSTEM_FOREGROUND"
+  fi
 
   # 大核 提高这个值有利于性能，不利于降低功耗。
   echo $SCHED_DOWNMIGRATE > /proc/sys/kernel/sched_downmigrate
   # 小核 提高这个值有利于降低功耗，不利于性能。
   echo $SCHED_UPMIGRATE > /proc/sys/kernel/sched_upmigrate
-  module_log "- CPU 大核分配${SCHED_DOWN_STATUS}: ${SCHED_DOWNMIGRATE}"
-  module_log "- CPU 小核分配${SCHED_UP_STATUS}: ${SCHED_UPMIGRATE}"
+  if [ $OPTIMIZE_MODULE == "0" ]; then
+    module_log "- CPU 大核分配: ${SCHED_DOWNMIGRATE}"
+    module_log "- CPU 小核分配: ${SCHED_UPMIGRATE}"
+  fi
   # 较为轻的温控方案
   # GPU 温控 115度 极限120 到120会过热保护
   echo "115000" > /sys/class/thermal/thermal_zone32/trip_point_0_temp
   # CPU 温控 修改为99度
   echo "99000" > /sys/class/thermal/thermal_zone36/trip_point_0_temp
-  module_log "- 核心分配优化已开启"
-  module_log "- CPU/GPU 温控优化温控已开启"
-  # 读取负载均衡配置
-  SCHEDTUNE=$(read_config "负载均衡 " "0")
-  if [ "$SCHEDTUNE" == "1" ]; then
-    SCHEDTUNE=2
-    module_log "CPU 负载均衡模式: 软件均衡"
-  else
-    SCHEDTUNE=1
-    module_log "CPU 负载均衡模式: 核心均衡"
+  if [ $OPTIMIZE_MODULE == "0" ]; then
+    module_log "- CPU/GPU 温控优化温控已开启"
   fi
+
   # CPU 负载均衡，改1为核心均衡，2为软件均衡，可能只会有部分生效，是因为系统限制
   echo $SCHEDTUNE > /dev/cpuset/sched_relax_domain_level
   echo $SCHEDTUNE > /dev/cpuset/system-background/sched_relax_domain_level
@@ -212,7 +146,17 @@ if [ "$PERFORMANCE" != "3" ]; then
   echo $SCHEDTUNE > /dev/cpuset/restricted/sched_relax_domain_level
   echo $SCHEDTUNE > /dev/cpuset/asopt/sched_relax_domain_level
   echo $SCHEDTUNE > /dev/cpuset/camera-daemon/sched_relax_domain_level
+  # 输出负载均衡模式
+  if [ $OPTIMIZE_MODULE == "0" ]; then
+    if [ "$SCHEDTUNE" == "1" ]; then
+      module_log "当前 CPU 负载均衡模式: 核心均衡"
+    elif [ "$SCHEDTUNE" == "2" ]; then
+      module_log "当前 CPU 负载均衡模式: 软件均衡"
+    fi
+  fi
+
   # CPU 调度
+  CPU_SCALING="performance"
   chmod 644 /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
   echo $CPU_SCALING > /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
   chmod 644 /sys/devices/system/cpu/cpu6/cpufreq/scaling_governor
@@ -221,13 +165,83 @@ if [ "$PERFORMANCE" != "3" ]; then
   echo $CPU_SCALING > /sys/devices/system/cpu/cpu7/cpufreq/scaling_governor
   # 将 CPU_SCALING 模式转换为大写字符串并输出
   CPU_SCALING_UPPERCASE=$(echo "$CPU_SCALING" | tr '[:lower:]' '[:upper:]')
-  module_log "CPU 调度模式为 ${CPU_SCALING_UPPERCASE} 性能模式"
+  [ $OPTIMIZE_MODULE == "0" ] && module_log "CPU 调度模式为 ${CPU_SCALING_UPPERCASE} 性能模式"
+  # 启用所有离线的 CPU
+  for cpu in /sys/devices/system/cpu/cpu*/online; do
+    [ "$(cat "$cpu")" == 0 ] && echo 1 > "$cpu"
+  done
+elif [ "$PERFORMANCE" == "1" ]; then
+  # 输出日志
+  module_log "当前模式: 省电优先（$PERFORMANCE）"
+  # 设置 CPU 应用分配
+  # 用户后台应用
+  echo "0" > /dev/cpuset/background/cpus
+  # 系统后台应用
+  echo "0" > /dev/cpuset/system-background/cpus
+  # 前台应用
+  echo "1-3" > /dev/cpuset/foreground/cpus
+  # 上层应用
+  echo "3" > /dev/cpuset/top-app/cpus
+
+  # 输出日志
+  if [ $OPTIMIZE_MODULE == "0" ]; then
+    module_log "正在设置 CPU 应用分配"
+    module_log "- 用户的后台应用: $BACKGROUND"
+    module_log "- 系统的后台应用: $SYSTEM_BACKGROUND"
+    module_log "- 前台应用: $FOREGROUND"
+    module_log "- 上层应用: $SYSTEM_FOREGROUND"
+  fi
+
+  # 大核 提高这个值有利于性能，不利于降低功耗。
+  echo $SCHED_DOWNMIGRATE > /proc/sys/kernel/sched_downmigrate
+  # 小核 提高这个值有利于降低功耗，不利于性能。
+  echo $SCHED_UPMIGRATE > /proc/sys/kernel/sched_upmigrate
+  if [ $OPTIMIZE_MODULE == "0" ]; then
+    module_log "- CPU 大核分配: ${SCHED_DOWNMIGRATE}"
+    module_log "- CPU 小核分配: ${SCHED_UPMIGRATE}"
+  fi
+
+  # CPU 负载均衡，改1为核心均衡，2为软件均衡，可能只会有部分生效，是因为系统限制
+  echo $SCHEDTUNE > /dev/cpuset/sched_relax_domain_level
+  echo $SCHEDTUNE > /dev/cpuset/system-background/sched_relax_domain_level
+  echo $SCHEDTUNE > /dev/cpuset/background/sched_relax_domain_level
+  echo $SCHEDTUNE > /dev/cpuset/camera-background/sched_relax_domain_level
+  echo $SCHEDTUNE > /dev/cpuset/foreground/sched_relax_domain_level
+  echo $SCHEDTUNE > /dev/cpuset/top-app/sched_relax_domain_level
+  echo $SCHEDTUNE > /dev/cpuset/restricted/sched_relax_domain_level
+  echo $SCHEDTUNE > /dev/cpuset/asopt/sched_relax_domain_level
+  echo $SCHEDTUNE > /dev/cpuset/camera-daemon/sched_relax_domain_level
+  # 输出负载均衡模式
+  if [ $OPTIMIZE_MODULE == "0" ]; then
+    if [ "$SCHEDTUNE" == "1" ]; then
+      module_log "当前 CPU 负载均衡模式: 核心均衡"
+    elif [ "$SCHEDTUNE" == "2" ]; then
+      module_log "当前 CPU 负载均衡模式: 软件均衡"
+    fi
+  fi
+
+  # CPU 调度
+  CPU_SCALING="powersave"
+  chmod 644 /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
+  echo $CPU_SCALING > /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
+  chmod 644 /sys/devices/system/cpu/cpu6/cpufreq/scaling_governor
+  echo $CPU_SCALING > /sys/devices/system/cpu/cpu6/cpufreq/scaling_governor
+  chmod 644 /sys/devices/system/cpu/cpu7/cpufreq/scaling_governor
+  echo $CPU_SCALING > /sys/devices/system/cpu/cpu7/cpufreq/scaling_governor
+  # 将 CPU_SCALING 模式转换为大写字符串并输出
+  CPU_SCALING_UPPERCASE=$(echo "$CPU_SCALING" | tr '[:lower:]' '[:upper:]')
+  [ $OPTIMIZE_MODULE == "0" ] && module_log "CPU 调度模式为 ${CPU_SCALING_UPPERCASE} 性能模式"
+elif [ "$PERFORMANCE" == "2" ]; then
+  module_log "当前模式: 养老模式（$PERFORMANCE）"
 fi
 
 
 
-# 启用 CPU 动态电压调节的功能
-echo "1" > /sys/devices/system/cpu/c1dcvs/enable_c1dcvs
+
+
+
+
+
 if [ "$PERFORMANCE" == "0" ]; then
   # CPU 调整
   echo "100" > /dev/stune/schedtune.boost
@@ -237,7 +251,7 @@ if [ "$PERFORMANCE" == "0" ]; then
   echo "20" > /dev/stune/rt/schedtune.boost
   echo "50" > /dev/stune/io/schedtune.boost
   echo "50" > /dev/stune/camera-daemon/schedtune.boost
-  # 禁用 调度自动分组
+  # 禁用调度自动分组
   echo "0" > /proc/sys/kernel/sched_autogroup_enabled
   # 功耗换性能
   echo "1" > /sys/module/ged/parameters/gx_game_mode
@@ -367,18 +381,18 @@ if [ "$PERFORMANCE" == "0" ]; then
   echo "120" > /sys/class/kgsl/kgsl-3d0/idle_timer
   chmod 444 /sys/class/kgsl/kgsl-3d0/idle_timer
   # 关闭 CPU 动态电压调节的功能
-  echo 0 > /sys/devices/system/cpu/c1dcvs/enable_c1dcvs
+  echo "0" > /sys/devices/system/cpu/c1dcvs/enable_c1dcvs
   # 通过DEBUG模式开启 GPU/CPU 加速
   settings put global enable_gpu_debug_layers 0
   settings put system debug.composition.type dyn
-  module_log "GPU 加速已开启 (启用DEBUG模式)"
+  [ $OPTIMIZE_MODULE == "0" ] && module_log "GPU 加速已开启 (启用DEBUG模式)"
   echo "1" > /proc/cpu_loading/debug_enable
   echo "1" > /proc/cpu_loading/uevent_enable
   echo "68" > /proc/cpu_loading/overThrhld
   echo "45" > /proc/cpu_loading/underThrhld
   echo "68" > /proc/cpu_loading/specify_overThrhld
   echo "7654" > /proc/cpu_loading/specify_cpus
-  module_log "CPU 加速已开启（启用DEBUG模式）"
+  [ $OPTIMIZE_MODULE == "0" ] && module_log "CPU 加速已开启（启用DEBUG模式）"
   # GPU 优化
   echo "0" > /sys/class/kgsl/kgsl-3d0/default_pwrlevel
   echo "3" > /sys/class/kgsl/kgsl-3d0/devfreq/adrenoboost
@@ -405,70 +419,102 @@ echo "0" > /sys/block/loop5/queue/iostats
 echo "0" > /sys/block/loop6/queue/iostats
 echo "0" > /sys/block/loop7/queue/iostats
 echo "0" > /sys/block/sda/queue/iostats
+echo "0" > /sys/block/sdb/queue/iostats
+echo "2" > /sys/block/sda/queue/rq_affinity
 # 页面簇优化
 echo "0" > /proc/sys/vm/page-cluster
 # 内核堆优化
 echo "0" > /proc/sys/kernel/randomize_va_space
 # 禁止压缩不可压缩的进程
 echo "0" > /proc/sys/vm/compact_unevictable_allowed
+# 禁用 Android Binder 调试
+echo "0" > /sys/module/binder/parameters/debug_mask
+echo "0" > /sys/module/binder_alloc/parameters/debug_mask
+# 禁用内核调试
+echo "0" > /sys/module/msm_show_resume_irq/parameters/debug_mask
+echo "N" > /sys/kernel/debug/debug_enabled
+# 禁用不必要的转储
+echo "0" > /sys/module/subsystem_restart/parameters/enable_ramdumps
+# 禁用用户 dmesg 日志
+echo "off" > /proc/sys/kernel/printk_devkmsg
+# 禁用调度数据统计（安卓 11+）
+echo "0" > /proc/sys/kernel/sched_schedstats
+# 禁用F2FS IO统计（安卓 12+）
+echo "0" > /dev/sys/fs/by-name/userdata/iostat_enable
+# 输出简要日志
+[ $OPTIMIZE_MODULE == "1" ] && module_log "已开启 CPU / GPU 优化"
+
 
 # 关闭 ZRAM 减少性能/磁盘损耗
-swapoff /dev/block/zram0 2>/dev/null
-swapoff /dev/block/zram1 2>/dev/null
-swapoff /dev/block/zram2 2>/dev/null
-echo "1" > /sys/block/zram0/reset
-module_log "已禁用系统 ZRAM 压缩内存"
+if [ "$OPTIMIZE_ZRAM" == "1" ]; then
+  swapoff /dev/block/zram0 2>/dev/null
+  swapoff /dev/block/zram1 2>/dev/null
+  swapoff /dev/block/zram2 2>/dev/null
+  echo "1" > /sys/block/zram0/reset
+  # 配置 prop
+  setprop app_memory_compression 0
+  setprop debug.gralloc.enable_fb_ubwc 1
+  setprop persist.sys.purgeable_assets 1
+  setprop zram_enabled 0
+  module_log "已禁用系统 ZRAM 压缩内存"
+fi
 
 # 快充优化
-chmod 755 /sys/class/power_supply/*/*
-chmod 755 /sys/module/qpnp_smbcharger/*/*
-chmod 755 /sys/module/dwc3_msm/*/*
-chmod 755 /sys/module/phy_msm_usb/*/*
-echo "1" > /sys/kernel/fast_charge/force_fast_charge
-echo "1" > /sys/kernel/fast_charge/failsafe
-echo "1" > /sys/class/power_supply/battery/allow_hvdcp3
-echo "0" > /sys/class/power_supply/battery/restricted_charging
-echo "0" > /sys/class/power_supply/battery/system_temp_level
-echo "0" > /sys/class/power_supply/battery/input_current_limited
-echo "1" >/sys/class/power_supply/battery/subsystem/usb/pd_allowed
-echo "1" > /sys/class/power_supply/battery/input_current_settled
-echo "100" >/sys/class/power_supply/bms/temp_cool
-echo "600" >/sys/class/power_supply/bms/temp_warm
-echo "30000" > /sys/module/qpnp_smbcharger/parameters/default_hvdcp_icl_ma
-echo "30000" > /sys/module/qpnp_smbcharger/parameters/default_dcp_icl_ma
-echo "30000" > /sys/module/qpnp_smbcharger/parameters/default_hvdcp3_icl_ma
-echo "30000" > /sys/module/dwc3_msm/parameters/dcp_max_current
-echo "30000" > /sys/module/dwc3_msm/parameters/hvdcp_max_current
-echo "30000" > /sys/module/phy_msm_usb/parameters/dcp_max_current
-echo "30000" > /sys/module/phy_msm_usb/parameters/hvdcp_max_current
-echo "30000" > /sys/module/phy_msm_usb/parameters/lpm_disconnect_thresh
-echo "30000000" > /sys/class/power_supply/dc/current_max
-echo "30000000" > /sys/class/power_supply/main/current_max
-echo "30000000" > /sys/class/power_supply/parallel/current_max
-echo "30000000" > /sys/class/power_supply/pc_port/current_max
-echo "30000000" > /sys/class/power_supply/qpnp-dc/current_max
-echo "30000000" > /sys/class/power_supply/battery/current_max
-echo "30000000" > /sys/class/power_supply/battery/input_current_max
-echo "30000000" > /sys/class/power_supply/usb/current_max
-echo "30000000" > /sys/class/power_supply/usb/hw_current_max
-echo "30000000" > /sys/class/power_supply/usb/pd_current_max
-echo "30000000" > /sys/class/power_supply/usb/ctm_current_max
-echo "30000000" > /sys/class/power_supply/usb/sdp_current_max
-echo "30100000" > /sys/class/power_supply/main/constant_charge_current_max
-echo "30100000" > /sys/class/power_supply/parallel/constant_charge_current_max
-echo "30100000" > /sys/class/power_supply/battery/constant_charge_current_max
-echo "31000000" > /sys/class/qcom-battery/restricted_current
-echo "1" > /sys/class/power_supply/usb/boost_current
-module_log "已开启快充优化"
+if [ "$OPTIMIZE_WZRY" == "1" ]; then
+  chmod 755 /sys/class/power_supply/*/*
+  chmod 755 /sys/module/qpnp_smbcharger/*/*
+  chmod 755 /sys/module/dwc3_msm/*/*
+  chmod 755 /sys/module/phy_msm_usb/*/*
+  echo "1" > /sys/kernel/fast_charge/force_fast_charge
+  echo "1" > /sys/kernel/fast_charge/failsafe
+  echo "1" > /sys/class/power_supply/battery/allow_hvdcp3
+  echo "0" > /sys/class/power_supply/battery/restricted_charging
+  echo "0" > /sys/class/power_supply/battery/system_temp_level
+  echo "0" > /sys/class/power_supply/battery/input_current_limited
+  echo "1" > /sys/class/power_supply/battery/subsystem/usb/pd_allowed
+  echo "1" > /sys/class/power_supply/battery/input_current_settled
+  echo "0" > /sys/class/power_supply/battery/input_suspend
+  echo "1" > /sys/class/power_supply/battery/battery_charging_enabled
+  echo "1" > /sys/class/power_supply/usb/boost_current
+  echo "100" >/sys/class/power_supply/bms/temp_cool
+  echo "600" >/sys/class/power_supply/bms/temp_warm
+  echo "30000" > /sys/module/qpnp_smbcharger/parameters/default_hvdcp_icl_ma
+  echo "30000" > /sys/module/qpnp_smbcharger/parameters/default_dcp_icl_ma
+  echo "30000" > /sys/module/qpnp_smbcharger/parameters/default_hvdcp3_icl_ma
+  echo "30000" > /sys/module/dwc3_msm/parameters/dcp_max_current
+  echo "30000" > /sys/module/dwc3_msm/parameters/hvdcp_max_current
+  echo "30000" > /sys/module/phy_msm_usb/parameters/dcp_max_current
+  echo "30000" > /sys/module/phy_msm_usb/parameters/hvdcp_max_current
+  echo "30000" > /sys/module/phy_msm_usb/parameters/lpm_disconnect_thresh
+  echo "12000000" > /sys/class/power_supply/battery/fast_charge_current
+  echo "12000000" > /sys/class/power_supply/battery/thermal_input_current
+  echo "30000000" > /sys/class/power_supply/dc/current_max
+  echo "30000000" > /sys/class/power_supply/main/current_max
+  echo "30000000" > /sys/class/power_supply/parallel/current_max
+  echo "30000000" > /sys/class/power_supply/pc_port/current_max
+  echo "30000000" > /sys/class/power_supply/qpnp-dc/current_max
+  echo "30000000" > /sys/class/power_supply/battery/current_max
+  echo "30000000" > /sys/class/power_supply/battery/input_current_max
+  echo "30000000" > /sys/class/power_supply/usb/current_max
+  echo "30000000" > /sys/class/power_supply/usb/hw_current_max
+  echo "30000000" > /sys/class/power_supply/usb/pd_current_max
+  echo "30000000" > /sys/class/power_supply/usb/ctm_current_max
+  echo "30000000" > /sys/class/power_supply/usb/sdp_current_max
+  echo "30100000" > /sys/class/power_supply/main/constant_charge_current_max
+  echo "30100000" > /sys/class/power_supply/parallel/constant_charge_current_max
+  echo "30100000" > /sys/class/power_supply/battery/constant_charge_current_max
+  echo "31000000" > /sys/class/qcom-battery/restricted_current
+  module_log "已开启快充优化"
+fi
 
 # 王者荣耀游戏优化
 if [ "$OPTIMIZE_WZRY" == "1" ]; then
   # 开启王者荣耀 O3T 优化
   # 王者荣耀配置文件夹路径
-  module_log "正在开启王者荣耀 O3T 优化"
+  [ $OPTIMIZE_MODULE == "0" ] && module_log "正在开启王者荣耀 O3T 优化"
   SHARED_PREFS="/data/data/com.tencent.tmgp.sgame/shared_prefs"
   if [ ! -d "$SHARED_PREFS" ]; then
-    module_log "- 未找到王者荣耀配置文件夹"
+    [ $OPTIMIZE_MODULE == "0" ] && module_log "- 未找到王者荣耀配置文件夹"
   else
     # 王者荣耀配置文件
     PLAYER_PREFS="$SHARED_PREFS/com.tencent.tmgp.sgame.v2.playerprefs.xml"
@@ -481,7 +527,7 @@ if [ "$OPTIMIZE_WZRY" == "1" ]; then
     <boolean name=\"EnableGPUSkin\"value=\"false\"/>
     <boolean name=\"EnableGLES3\"value=\"false\"/>
 </map>" > $CONFIG
-    module_log "- 更新王者荣耀 OpenGLES3Config.xml 配置文件"
+    [ $OPTIMIZE_MODULE == "0" ] && module_log "- 更新王者荣耀 OpenGLES3Config.xml 配置文件"
     # 删除王者荣耀配置参数
     sed -i '/.*<int name="VulkanTryCount" value=".*" \/>/'d "$PLAYER_PREFS"
     sed -i '/.*<int name="EnableVulkan" value=".*" \/>/'d "$PLAYER_PREFS"
@@ -502,19 +548,20 @@ if [ "$OPTIMIZE_WZRY" == "1" ]; then
     sed -i '8a \ \ \ \ <int name="EnableHWVendorOpt" value="1" \/>' "$PLAYER_PREFS"
     sed -i '9a \ \ \ \ <int name="UnityGraphicsQuality" value="1" \/>' "$PLAYER_PREFS"
     sed -i '10a \ \ \ \ <int name="EnableGPUReport" value="2" \/>' "$PLAYER_PREFS"
-    module_log "- 更新王者荣耀配置参数"
+    [ $OPTIMIZE_MODULE == "0" ] && module_log "- 更新王者荣耀配置参数"
     chmod 550 $SHARED_PREFS
     chmod 440 $PLAYER_PREFS
-    module_log "- 更新配置文件权限"
-    module_log "- 已开启王者荣耀 O3T 优化"
+    [ $OPTIMIZE_MODULE == "0" ] && module_log "- 更新配置文件权限"
+    [ $OPTIMIZE_MODULE == "0" ] && module_log "- 已开启王者荣耀 O3T 优化"
+    [ $OPTIMIZE_MODULE == "1" ] && module_log "已开启王者荣耀 O3T 优化"
   fi
 elif [ "$OPTIMIZE_WZRY" == "2" ]; then
   # 开启王者荣耀 O3T 优化
   # 王者荣耀配置文件夹路径
-  module_log "正在开启王者荣耀 VT 优化"
+  [ $OPTIMIZE_MODULE == "0" ] && module_log "正在开启王者荣耀 VT 优化"
   SHARED_PREFS="/data/data/com.tencent.tmgp.sgame/shared_prefs"
   if [ ! -d "$SHARED_PREFS" ]; then
-    module_log "- 未找到王者荣耀配置文件夹"
+    [ $OPTIMIZE_MODULE == "0" ] && module_log "- 未找到王者荣耀配置文件夹"
   else
     # 王者荣耀配置文件
     PLAYER_PREFS="$SHARED_PREFS/com.tencent.tmgp.sgame.v2.playerprefs.xml"
@@ -527,7 +574,7 @@ elif [ "$OPTIMIZE_WZRY" == "2" ]; then
     <boolean name=\"EnableGPUSkin\"value=\"false\"/>
     <boolean name=\"EnableGLES3\"value=\"false\"/>
 </map>" > $CONFIG
-    module_log "- 更新王者荣耀 OpenGLES3Config.xml 配置文件"
+    [ $OPTIMIZE_MODULE == "0" ] && module_log "- 更新王者荣耀 OpenGLES3Config.xml 配置文件"
     # 删除王者荣耀配置参数
     sed -i '/.*<int name="VulkanTryCount" value=".*" \/>/'d "$PLAYER_PREFS"
     sed -i '/.*<int name="EnableVulkan" value=".*" \/>/'d "$PLAYER_PREFS"
@@ -548,11 +595,12 @@ elif [ "$OPTIMIZE_WZRY" == "2" ]; then
     sed -i '8a \ \ \ \ <int name="EnableHWVendorOpt" value="1" \/>' "$PLAYER_PREFS"
     sed -i '9a \ \ \ \ <int name="UnityGraphicsQuality" value="1" \/>' "$PLAYER_PREFS"
     sed -i '10a \ \ \ \ <int name="EnableGPUReport" value="2" \/>' "$PLAYER_PREFS"
-    module_log "- 更新王者荣耀配置参数"
+    [ $OPTIMIZE_MODULE == "0" ] && module_log "- 更新王者荣耀配置参数"
     chmod 550 $SHARED_PREFS
     chmod 440 $PLAYER_PREFS
-    module_log "- 更新配置文件权限"
-    module_log "- 已开启王者荣耀 VT 优化"
+    [ $OPTIMIZE_MODULE == "0" ] && module_log "- 更新配置文件权限"
+    [ $OPTIMIZE_MODULE == "0" ] && module_log "- 已开启王者荣耀 VT 优化"
+    [ $OPTIMIZE_MODULE == "1" ] && module_log "已开启王者荣耀 VT 优化"
   fi
 elif [ "$OPTIMIZE_WZRY" == "3" ]; then
   # 删除更改后的配置, 使用默认配置参数
@@ -582,9 +630,10 @@ elif [ "$OPTIMIZE_WZRY" == "3" ]; then
       sed -i '/.*<int name="EnableGPUReport" value=".*" \/>/'d "$PLAYER_PREFS"
       chmod 771 $SHARED_PREFS
       chmod 660 $PLAYER_PREFS
-      module_log "已删除王者荣耀 $STATUS_PREFS 配置, 已更新 config.yaml"
+      module_log "已还原王者荣耀 $STATUS_PREFS 配置, 已更新 config.yaml"
+    else
+      module_log "未找到更改的王者荣耀 O3T/VT 配置参数, 已更新 config.yaml"
     fi
-    module_log "未找到更改的王者荣耀 O3T/VT 配置参数, 已恢复 config.yaml"
   else
     module_log "未找到王者荣耀配置文件夹, 已更新 config.yaml"
   fi
@@ -593,7 +642,6 @@ fi
 
 # 移除小米更新验证
 # 获取用户配置, 判断配置是否为1
-# 移除小米更新验证
 if [ "$OPTIMIZE_MIUI_OTA" == "1" ]; then
   # 查找 /*/etc/device_features 文件夹及其子文件夹下的所有 *.xml 文件
   for dir in /*/etc/device_features; do
@@ -613,6 +661,7 @@ if [ "$OPTIMIZE_MIUI_OTA" == "1" ]; then
       done
     fi
   done
+  module_log "已移除小米更新验证"
 fi
 
 # TCP 优化
@@ -684,7 +733,7 @@ net.nf_conntrack_max = 262144
   # 给予 sysctl.conf 配置文件权限
   chmod 777 /data/sysctl.conf
   # 启用自定义配置文件
-  sysctl -p /data/sysctl.conf
+  sysctl -p /data/sysctl.conf >/dev/null 2>&1
   # 启用 ip route 配置
   ip route | while read config; do
     ip route change $config initcwnd 20;
@@ -696,4 +745,4 @@ fi
 
 # Ciallo～ (∠・ω< )⌒☆
 module_log "模块 service.sh 已结束"
-echo "[$(date '+%m-%d %H:%M:%S.%3N')] Ciallo～ (∠・ω< )⌒☆" >> $LOG_FILE
+module_log "Ciallo～ (∠・ω< )⌒☆"
