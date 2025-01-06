@@ -80,13 +80,14 @@ if [ $OPTIMIZE_MODULE == "0" ] || [ $OPTIMIZE_MODULE == "1" ]; then
   # 判断日志文件是否为已创建
   # 已创建则在文件末尾添加换行
   [ -f $LOG_FILE ] && echo "" >> $LOG_FILE;
-elif [ $OPTIMIZE_MODULE == "3" ]; then
+elif [ $OPTIMIZE_MODULE == "4" ]; then
   # 重定向日志路径到 /dev/null
   LOG_FILE = "/dev/null"
 fi
 
 # 定义 module_log 输出日志函数
 module_log() {
+  if [ $OPTIMIZE_MODULE == "4" ]; then echo "[$(date '+%m-%d %H:%M:%S.%3N')] $1"; return; fi
   if [ $OPTIMIZE_MODULE == "3" ]; then return; fi
   if [ $OPTIMIZE_MODULE == "2" ] && [ "$1" != Ciallo* ]; then return; fi
   echo "[$(date '+%m-%d %H:%M:%S.%3N')] $1" >> $LOG_FILE
@@ -445,68 +446,6 @@ echo "0" > /dev/sys/fs/by-name/userdata/iostat_enable
 [ $OPTIMIZE_MODULE == "1" ] && module_log "已开启 CPU / GPU 优化"
 
 
-# 关闭 ZRAM 减少性能/磁盘损耗
-if [ "$OPTIMIZE_ZRAM" == "1" ]; then
-  swapoff /dev/block/zram0 2>/dev/null
-  swapoff /dev/block/zram1 2>/dev/null
-  swapoff /dev/block/zram2 2>/dev/null
-  echo "1" > /sys/block/zram0/reset
-  # 配置 prop
-  setprop app_memory_compression 0
-  setprop debug.gralloc.enable_fb_ubwc 1
-  setprop persist.sys.purgeable_assets 1
-  setprop zram_enabled 0
-  module_log "已禁用系统 ZRAM 压缩内存"
-fi
-
-# 快充优化
-if [ "$OPTIMIZE_WZRY" == "1" ]; then
-  chmod 755 /sys/class/power_supply/*/*
-  chmod 755 /sys/module/qpnp_smbcharger/*/*
-  chmod 755 /sys/module/dwc3_msm/*/*
-  chmod 755 /sys/module/phy_msm_usb/*/*
-  echo "1" > /sys/kernel/fast_charge/force_fast_charge
-  echo "1" > /sys/kernel/fast_charge/failsafe
-  echo "1" > /sys/class/power_supply/battery/allow_hvdcp3
-  echo "0" > /sys/class/power_supply/battery/restricted_charging
-  echo "0" > /sys/class/power_supply/battery/system_temp_level
-  echo "0" > /sys/class/power_supply/battery/input_current_limited
-  echo "1" > /sys/class/power_supply/battery/subsystem/usb/pd_allowed
-  echo "1" > /sys/class/power_supply/battery/input_current_settled
-  echo "0" > /sys/class/power_supply/battery/input_suspend
-  echo "1" > /sys/class/power_supply/battery/battery_charging_enabled
-  echo "1" > /sys/class/power_supply/usb/boost_current
-  echo "100" >/sys/class/power_supply/bms/temp_cool
-  echo "600" >/sys/class/power_supply/bms/temp_warm
-  echo "30000" > /sys/module/qpnp_smbcharger/parameters/default_hvdcp_icl_ma
-  echo "30000" > /sys/module/qpnp_smbcharger/parameters/default_dcp_icl_ma
-  echo "30000" > /sys/module/qpnp_smbcharger/parameters/default_hvdcp3_icl_ma
-  echo "30000" > /sys/module/dwc3_msm/parameters/dcp_max_current
-  echo "30000" > /sys/module/dwc3_msm/parameters/hvdcp_max_current
-  echo "30000" > /sys/module/phy_msm_usb/parameters/dcp_max_current
-  echo "30000" > /sys/module/phy_msm_usb/parameters/hvdcp_max_current
-  echo "30000" > /sys/module/phy_msm_usb/parameters/lpm_disconnect_thresh
-  echo "12000000" > /sys/class/power_supply/battery/fast_charge_current
-  echo "12000000" > /sys/class/power_supply/battery/thermal_input_current
-  echo "30000000" > /sys/class/power_supply/dc/current_max
-  echo "30000000" > /sys/class/power_supply/main/current_max
-  echo "30000000" > /sys/class/power_supply/parallel/current_max
-  echo "30000000" > /sys/class/power_supply/pc_port/current_max
-  echo "30000000" > /sys/class/power_supply/qpnp-dc/current_max
-  echo "30000000" > /sys/class/power_supply/battery/current_max
-  echo "30000000" > /sys/class/power_supply/battery/input_current_max
-  echo "30000000" > /sys/class/power_supply/usb/current_max
-  echo "30000000" > /sys/class/power_supply/usb/hw_current_max
-  echo "30000000" > /sys/class/power_supply/usb/pd_current_max
-  echo "30000000" > /sys/class/power_supply/usb/ctm_current_max
-  echo "30000000" > /sys/class/power_supply/usb/sdp_current_max
-  echo "30100000" > /sys/class/power_supply/main/constant_charge_current_max
-  echo "30100000" > /sys/class/power_supply/parallel/constant_charge_current_max
-  echo "30100000" > /sys/class/power_supply/battery/constant_charge_current_max
-  echo "31000000" > /sys/class/qcom-battery/restricted_current
-  module_log "已开启快充优化"
-fi
-
 # 王者荣耀游戏优化
 if [ "$OPTIMIZE_WZRY" == "1" ]; then
   # 开启王者荣耀 O3T 优化
@@ -640,29 +579,21 @@ elif [ "$OPTIMIZE_WZRY" == "3" ]; then
   sed -i '/^王者优化 /c\王者优化 0' $CONFIG_FILE
 fi
 
-# 移除小米更新验证
-# 获取用户配置, 判断配置是否为1
-if [ "$OPTIMIZE_MIUI_OTA" == "1" ]; then
-  # 查找 /*/etc/device_features 文件夹及其子文件夹下的所有 *.xml 文件
-  for dir in /*/etc/device_features; do
-    # 判断是否是文件夹
-    if [ -d "$dir" ]; then
-      # 操作文件夹下的文件
-      for file in "$dir"/*.xml; do
-        # 判断是否为 OTA 配置文件
-        if [ -f "$file" ] && grep -q 'support_ota_validate' "$file"; then
-          # 创建相关的文件夹
-          mkdir -p "${MODDIR}${dir}"
-          # 复制文件到目标目录
-          cp -f "$file" "${MODDIR}${dir}/"
-          # 修改 OTA 配置文件中的内容
-          sed -i 's/"support_ota_validate">true</"support_ota_validate">false</g' "${MODDIR}${dir}/$(basename "$file")"
-        fi
-      done
-    fi
-  done
-  module_log "已移除小米更新验证"
+
+# 关闭 ZRAM 减少性能/磁盘损耗
+if [ "$OPTIMIZE_ZRAM" == "1" ]; then
+  swapoff /dev/block/zram0 2>/dev/null
+  swapoff /dev/block/zram1 2>/dev/null
+  swapoff /dev/block/zram2 2>/dev/null
+  echo "1" > /sys/block/zram0/reset
+  # 配置 prop
+  setprop app_memory_compression 0
+  setprop debug.gralloc.enable_fb_ubwc 1
+  setprop persist.sys.purgeable_assets 1
+  setprop zram_enabled 0
+  module_log "已禁用系统 ZRAM 压缩内存"
 fi
+
 
 # TCP 优化
 if [ "$OPTIMIZE_TCP" == "1" ]; then
@@ -742,6 +673,87 @@ net.nf_conntrack_max = 262144
   rm -rf /data/vendor/wlan_logs
   module_log "已开启 TCP 网络优化"
 fi
+
+
+# 快充优化
+if [ "$OPTIMIZE_CHARGE" == "1" ]; then
+  chmod 755 /sys/class/power_supply/*/*
+  chmod 755 /sys/module/qpnp_smbcharger/*/*
+  chmod 755 /sys/module/dwc3_msm/*/*
+  chmod 755 /sys/module/phy_msm_usb/*/*
+  echo "1" > /sys/kernel/fast_charge/force_fast_charge
+  echo "1" > /sys/kernel/fast_charge/failsafe
+  echo "1" > /sys/class/power_supply/battery/allow_hvdcp3
+  echo "0" > /sys/class/power_supply/battery/restricted_charging
+  echo "0" > /sys/class/power_supply/battery/system_temp_level
+  echo "0" > /sys/class/power_supply/battery/input_current_limited
+  echo "1" > /sys/class/power_supply/battery/subsystem/usb/pd_allowed
+  echo "1" > /sys/class/power_supply/battery/input_current_settled
+  echo "0" > /sys/class/power_supply/battery/input_suspend
+  echo "1" > /sys/class/power_supply/battery/battery_charging_enabled
+  echo "1" > /sys/class/power_supply/usb/boost_current
+  echo "100" >/sys/class/power_supply/bms/temp_cool
+  echo "600" >/sys/class/power_supply/bms/temp_warm
+  echo "30000" > /sys/module/qpnp_smbcharger/parameters/default_hvdcp_icl_ma
+  echo "30000" > /sys/module/qpnp_smbcharger/parameters/default_dcp_icl_ma
+  echo "30000" > /sys/module/qpnp_smbcharger/parameters/default_hvdcp3_icl_ma
+  echo "30000" > /sys/module/dwc3_msm/parameters/dcp_max_current
+  echo "30000" > /sys/module/dwc3_msm/parameters/hvdcp_max_current
+  echo "30000" > /sys/module/phy_msm_usb/parameters/dcp_max_current
+  echo "30000" > /sys/module/phy_msm_usb/parameters/hvdcp_max_current
+  echo "30000" > /sys/module/phy_msm_usb/parameters/lpm_disconnect_thresh
+  echo "12000000" > /sys/class/power_supply/battery/fast_charge_current
+  echo "12000000" > /sys/class/power_supply/battery/thermal_input_current
+  echo "30000000" > /sys/class/power_supply/dc/current_max
+  echo "30000000" > /sys/class/power_supply/main/current_max
+  echo "30000000" > /sys/class/power_supply/parallel/current_max
+  echo "30000000" > /sys/class/power_supply/pc_port/current_max
+  echo "30000000" > /sys/class/power_supply/qpnp-dc/current_max
+  echo "30000000" > /sys/class/power_supply/battery/current_max
+  echo "30000000" > /sys/class/power_supply/battery/input_current_max
+  echo "30000000" > /sys/class/power_supply/usb/current_max
+  echo "30000000" > /sys/class/power_supply/usb/hw_current_max
+  echo "30000000" > /sys/class/power_supply/usb/pd_current_max
+  echo "30000000" > /sys/class/power_supply/usb/ctm_current_max
+  echo "30000000" > /sys/class/power_supply/usb/sdp_current_max
+  echo "30100000" > /sys/class/power_supply/main/constant_charge_current_max
+  echo "30100000" > /sys/class/power_supply/parallel/constant_charge_current_max
+  echo "30100000" > /sys/class/power_supply/battery/constant_charge_current_max
+  echo "31000000" > /sys/class/qcom-battery/restricted_current
+  module_log "已开启快充优化"
+fi
+
+
+# 移除小米更新验证
+# 获取用户配置, 判断配置是否为1
+if [ "$OPTIMIZE_MIUI_OTA" == "1" ]; then
+  # 查找 /*/etc/device_features 文件夹及其子文件夹下的所有 *.xml 文件
+  local times=0
+  for dir in /*/etc/device_features; do
+    # 判断是否是文件夹
+    if [ -d "$dir" ]; then
+      # 操作文件夹下的文件
+      for file in "$dir"/*.xml; do
+        # 判断是否为 OTA 配置文件
+        if [ -f "$file" ] && grep -q 'support_ota_validate' "$file"; then
+          # 创建相关的文件夹
+          mkdir -p "${MODDIR}${dir}"
+          # 复制文件到目标目录
+          cp -f "$file" "${MODDIR}${dir}/"
+          # 修改 OTA 配置文件中的内容
+          sed -i 's/"support_ota_validate">true</"support_ota_validate">false</g' "${MODDIR}${dir}/$(basename "$file")"
+          let times++
+        fi
+      done
+    fi
+  done
+  if [ $times > 0 ]; then
+    module_log "已移除小米更新验证"
+  else
+    module_log "未找到小米更新 OTA 配置文件"
+  fi
+fi
+
 
 # Ciallo～ (∠・ω< )⌒☆
 module_log "模块 service.sh 已结束"
