@@ -27,23 +27,16 @@ CONFIG_FILE="/storage/emulated/0/Android/config.yaml"
 LOG_FILE="/storage/emulated/0/Android/config.yaml.log"
 # 定义 read_config 读取配置函数，若找不到匹配项，则返回默认值
 read_config() {
-  result=$(awk -v start="$1" '
-    $0 ~ "^" start {
-      sub("^" start, "");
-      print;
-      exit
-    }
-  ' "$CONFIG_FILE")
-  if [ -z "$result" ]; then
-    echo "$2"
-  else
-    echo "$result"
-  fi
+  local result=$(sed -n "s/^$1//p" "$CONFIG_FILE")
+  echo ${result:-$2}
+}
+# 定义 write_config 写入配置函数
+write_config() {
+  sed -i "0,/^$1 /c$1 $2" "$CONFIG_FILE"
 }
 
 
 # 读取 config.yaml 配置
-
 # 性能模式
 PERFORMANCE=$(read_config "性能调节 " "0")
 # 负载均衡
@@ -576,7 +569,7 @@ elif [ "$OPTIMIZE_WZRY" == "3" ]; then
   else
     module_log "未找到王者荣耀配置文件夹, 已更新 config.yaml"
   fi
-  sed -i '/^王者优化 /c\王者优化 0' $CONFIG_FILE
+  write_config "王者优化" "0"
 fi
 
 
@@ -720,6 +713,8 @@ if [ "$OPTIMIZE_CHARGE" == "1" ]; then
   echo "30100000" > /sys/class/power_supply/parallel/constant_charge_current_max
   echo "30100000" > /sys/class/power_supply/battery/constant_charge_current_max
   echo "31000000" > /sys/class/qcom-battery/restricted_current
+  # 开启 KVDCP 快充
+  setprop persist.hvdcp.allow_opti 1
   module_log "已开启快充优化"
 fi
 

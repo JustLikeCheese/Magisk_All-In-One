@@ -27,8 +27,6 @@ ro.gps.agps_provider=0
 ro.sys.sdcardfs=true
 # 玄学待机省电
 ro.ril.disable.power.collapse=1
-# 开启 KVDCP 快充
-persist.hvdcp.allow_opti=1
 # 关闭内核日志
 persist.sys.offlinelog.kernel=false
 # 禁用 WPA 调试
@@ -57,7 +55,7 @@ persist.mm.enable.prefetch=false
 log.tag.stats_log=OFF
 ro.logd.size=64K
 ro.logd.size.stats=64K
-# 关闭日志缓存
+# 关闭系统日志缓存
 debug.atrace.tags.enableflags=0
 persist.sys.oplus.opm.logstart=false
 persist.sys.log.user=0
