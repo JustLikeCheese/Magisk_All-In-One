@@ -1,6 +1,6 @@
 id=All-In-One
-name=All-In-One 优化模块 v1.4-fix 版本
-version=v1.4-fix
+name=All-In-One 优化模块 v1.5-beta 版本
+version=v1.5-beta
 versionCode=7
 author=酷安@TheCheese
 description=QQ: 854675824 / 屏幕触控优化 / 解除 FPS 限制 / 关闭 Logd、SQLite、蓝牙、内核日志 / 待机省电 / SDCard 读写效率提升 / 优化网络性能 / 自动调节 CPU 核心分配 / 关闭 ZRAM 减少性能损耗 / 开启 GPU Debug 加速 / 功耗换性能
