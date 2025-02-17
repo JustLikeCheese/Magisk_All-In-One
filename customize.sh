@@ -1,6 +1,6 @@
 ui_print "- 正在释放文件"
 # 默认不删除温控，非必要情况下建议保留温控
-# unzip -o "$ZIPFILE" 'RESOURCES/system/*' -d $MODPATH >&2
+# unzip -o "$ZIPFILE" 'RESOURCES/system/*' -d $MODPATH >&2;echo "- 已释放解锁温控文件"
 # 复制配置文件到 /storage/emulated/0/Android/config.yaml 路径
 unzip -o "$ZIPFILE" 'config.yaml' -d "/storage/emulated/0/Android/" >&2
 echo "[$(date '+%m-%d %H:%M:%S.%3N')] All-In-One v1.5-beta 版本模块安装成功, 等待重启" >> "/storage/emulated/0/Android/config.yaml.log"
