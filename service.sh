@@ -600,16 +600,12 @@ fi
 
 # TCP 优化
 if [ "$OPTIMIZE_TCP" == "1" ]; then
+  temp_file=$(mktemp)
   echo "
-net.ipv4.conf.all.route_localnet=1
 net.ipv4.ip_forward = 1
-net.ipv4.conf.all.forwarding = 1
 net.ipv4.conf.default.forwarding = 1
-net.ipv6.conf.all.forwarding = 1
 net.ipv6.conf.default.forwarding = 1
 net.ipv6.conf.lo.forwarding = 1
-net.ipv6.conf.all.accept_ra = 2
-net.ipv6.conf.default.accept_ra = 2
 net.core.netdev_max_backlog = 100000
 net.core.netdev_budget = 50000
 net.core.netdev_budget_usecs = 5000
@@ -618,7 +614,6 @@ net.core.wmem_max = 67108864
 net.core.rmem_default = 67108864
 net.core.wmem_default = 67108864
 net.core.optmem_max = 65536
-net.core.somaxconn = 10000
 net.ipv4.icmp_echo_ignore_all = 0
 net.ipv4.icmp_echo_ignore_broadcasts = 1
 net.ipv4.icmp_ignore_bogus_error_responses = 1
@@ -634,7 +629,6 @@ net.ipv4.tcp_keepalive_time = 8
 net.ipv4.tcp_keepalive_intvl = 8
 net.ipv4.tcp_keepalive_probes = 1
 net.ipv4.tcp_synack_retries = 2
-net.ipv4.tcp_syncookies = 0
 net.ipv4.tcp_rfc1337 = 0
 net.ipv4.tcp_timestamps = 1
 net.ipv4.tcp_tw_reuse = 1
@@ -648,7 +642,6 @@ net.ipv4.udp_wmem_min = 8192
 net.ipv4.tcp_mtu_probing = 0
 net.ipv4.tcp_autocorking = 0
 net.ipv4.tcp_slow_start_after_idle = 0
-net.ipv4.tcp_max_syn_backlog = 30000
 net.ipv4.tcp_notsent_lowat = 16384
 net.ipv4.tcp_no_metrics_save = 1
 net.ipv4.tcp_frto = 0
@@ -662,12 +655,11 @@ net.ipv6.neigh.default.gc_thresh2=4096
 net.ipv6.neigh.default.gc_thresh1=2048
 net.ipv4.tcp_max_syn_backlog = 262144
 net.netfilter.nf_conntrack_max = 262144
-net.nf_conntrack_max = 262144
-" > /data/sysctl.conf
+" > $temp_file
   # 给予 sysctl.conf 配置文件权限
-  chmod 777 /data/sysctl.conf
+  chmod 777 $temp_file
   # 启用自定义配置文件
-  sysctl -p /data/sysctl.conf >/dev/null 2>&1
+  sysctl -p $temp_file >/dev/null 2>&1
   # 启用 ip route 配置
   ip route | while read config; do
     ip route change $config initcwnd 20;
