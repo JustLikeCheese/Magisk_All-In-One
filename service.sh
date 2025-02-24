@@ -78,7 +78,7 @@ module_log() {
   case "$OPTIMIZE_MODULE" in
     "0" | "1")
       # 输出模块日志
-      if [ "$1" == "1" ]; then
+      if [ "$1" != "1" ]; then
         # 输出日志到 $LOG_FILE
         echo "[$(date '+%m-%d %H:%M:%S.%3N')] $1" >> $LOG_FILE
       else
