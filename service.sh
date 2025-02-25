@@ -62,34 +62,21 @@ SCHED_DOWNMIGRATE=$(read_config "大核调度" "40 40")
 SCHED_UPMIGRATE=$(read_config "小核调度" "60 60")
 
 # 已创建文件则在末尾添加换行
-if [ "$OPTIMIZE_MODULE" = "0" ] || [ "$OPTIMIZE_MODULE" = "1" ]; then
-  [ -f "$LOG_FILE" ] && echo "" >> "$LOG_FILE";
-fi
+[ -f "$LOG_FILE" ] && [ "$OPTIMIZE_DEBUG" != "DEBUG" ] \
+&& { [ "$OPTIMIZE_MODULE" = 0 ] || [ "$OPTIMIZE_MODULE" = 1 ]; } \
+&& echo "" >> "$LOG_FILE"
 
 # 定义 module_log 输出日志函数
 module_log() {
-  case "$OPTIMIZE_MODULE" in
-    "0" | "1")
-      # 输出模块日志
-      if [ "$OPTIMIZE_DEBUG" = "DEBUG" ]; then
-        # 输出日志到控制台
-        echo "[$(date '+%m-%d %H:%M:%S.%3N')] $1"
-      else
-        # 输出日志到 $LOG_FILE
-        echo "[$(date '+%m-%d %H:%M:%S.%3N')] $1" >> "$LOG_FILE"
-      fi
-      ;;
-    "2")
-      # 只输出 Ciallo～(∠・ω< )⌒☆!
-      case "$1" in Ciallo*) 
-        echo "[$(date '+%m-%d %H:%M:%S.%3N')] $1" >> "$LOG_FILE"
-        ;;esac
-      ;;
-    "3")
-      # 禁用模块日志功能
-      return
-      ;;
-  esac
+    case "$OPTIMIZE_MODULE" in
+    2) case "$1" in Ciallo*) ;; *) return ;; esac ;; # 屏蔽不是 Ciallo～ (∠・ω< )⌒☆ 的日志
+    3) [ "$OPTIMIZE_DEBUG" != "DEBUG" ] && return ;; # 屏蔽不是在调试模式下输出的日志 3
+    esac
+    if [ "$OPTIMIZE_DEBUG" = "DEBUG" ]; then
+      echo "[$(date '+%m-%d %H:%M:%S.%3N')] $1"
+    else
+      echo "[$(date '+%m-%d %H:%M:%S.%3N')] $1" >> "$LOG_FILE"
+    fi
 }
 
 # 输出日志
