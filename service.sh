@@ -22,55 +22,47 @@ done
 rm -f "$test_file"
 
 
-# 定义配置文件路径和日志文件路径
-CONFIG_FILE="/storage/emulated/0/Android/config.yaml"
-LOG_FILE="/storage/emulated/0/Android/config.yaml.log"
-# 定义 read_config 读取配置函数，若找不到匹配项，则返回默认值
-read_config() {
-  local result=$(sed -n "s/^$1//p" "$CONFIG_FILE")
-  echo "${result:-$2}"
-}
-# 定义 write_config 写入配置函数
-write_config() {
-  sed -i "/^$1/c$1$2" "$CONFIG_FILE"
-}
-
+# 调用 function.sh 库
+MODDIR=${0%/*}
+. "$MODDIR"/function.sh
 
 # 读取 config.yaml 配置
 # 性能模式
-PERFORMANCE=$(read_config "性能调节 " "0")
+PERFORMANCE=$(read_config "性能调节" "0")
 # 负载均衡
-SCHEDTUNE=$(read_config "负载均衡 " "0")
+SCHEDTUNE=$(read_config "负载均衡" "0")
 
 # 获取 CPU 应用分配
-BACKGROUND=$(read_config "用户后台应用 " "0-1")
-SYSTEM_BACKGROUND=$(read_config "系统后台应用 " "0-2")
-FOREGROUND=$(read_config "前台应用 " "0-7")
-SYSTEM_FOREGROUND=$(read_config "上层应用 " "0-7")
+BACKGROUND=$(read_config "用户后台应用" "0-1")
+SYSTEM_BACKGROUND=$(read_config "系统后台应用" "0-2")
+FOREGROUND=$(read_config "前台应用" "0-7")
+SYSTEM_FOREGROUND=$(read_config "上层应用" "0-7")
 
 # 其他选项
 # 王者荣耀游戏优化
-OPTIMIZE_WZRY=$(read_config "王者优化 " "0")
+OPTIMIZE_WZRY=$(read_config "王者优化" "0")
 # 获取内存优化配置
-OPTIMIZE_ZRAM=$(read_config "内存优化 " "0")
+OPTIMIZE_ZRAM=$(read_config "内存优化" "0")
 # TCP 网络优化
-OPTIMIZE_TCP=$(read_config "TCP网络优化 " "1")
+OPTIMIZE_TCP=$(read_config "TCP网络优化" "1")
 # 快充优化
-OPTIMIZE_CHARGE=$(read_config "快充优化 " "1")
+OPTIMIZE_CHARGE=$(read_config "快充优化" "1")
 # 移除小米更新验证
-OPTIMIZE_MIUI_OTA=$(read_config "移除小米更新验证 " "0")
+OPTIMIZE_MIUI_OTA=$(read_config "移除小米更新验证" "0")
 # 模块日志输出
-OPTIMIZE_MODULE=$(read_config "模块日志输出 " "0")
+OPTIMIZE_MODULE=$(read_config "模块日志输出" "0")
+# 模块调试模式
+OPTIMIZE_DEBUG="$1"
 
 # 大核调度
 # 大核 提高这个值有利于性能，不利于降低功耗。
-SCHED_DOWNMIGRATE=$(read_config "大核调度 " "40 40")
+SCHED_DOWNMIGRATE=$(read_config "大核调度" "40 40")
 # 小核 提高这个值有利于降低功耗，不利于性能。
-SCHED_UPMIGRATE=$(read_config "小核调度 " "60 60")
+SCHED_UPMIGRATE=$(read_config "小核调度" "60 60")
 
 # 已创建文件则在末尾添加换行
-if [ "$OPTIMIZE_MODULE" == "0" ] || [ "$OPTIMIZE_MODULE" == "1" ]; then
-  [ -f $LOG_FILE ] && echo "" >> $LOG_FILE;
+if [ "$OPTIMIZE_MODULE" = "0" ] || [ "$OPTIMIZE_MODULE" = "1" ]; then
+  [ -f "$LOG_FILE" ] && echo "" >> "$LOG_FILE";
 fi
 
 # 定义 module_log 输出日志函数
