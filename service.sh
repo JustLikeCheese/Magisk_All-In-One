@@ -1,3 +1,4 @@
+#!/bin/sh
 # 延迟执行 service.sh 脚本
 # All-In-One v1.0 的 sleep 1m 在某些设备上不太实际
 # 从 v1.2 版本开始采用监测文件方案判断是否开机
@@ -96,7 +97,7 @@ module_log "开机完成，正在读取 config.yaml 配置.."
 
 
 # 优化 CPU 核心分配
-if [ "$PERFORMANCE" == "0" ]; then
+if [ "$PERFORMANCE" = "0" ]; then
   # 输出日志
   module_log "当前模式: 性能优先（$PERFORMANCE)"
   # 设置 CPU 应用分配
@@ -110,7 +111,7 @@ if [ "$PERFORMANCE" == "0" ]; then
   echo "$SYSTEM_FOREGROUND" > /dev/cpuset/top-app/cpus
 
   # 输出日志
-  if [ "$OPTIMIZE_MODULE" == "0" ]; then
+  if [ "$OPTIMIZE_MODULE" = "0" ]; then
     module_log "正在设置 CPU 应用分配"
     module_log "- 用户的后台应用: $BACKGROUND"
     module_log "- 系统的后台应用: $SYSTEM_BACKGROUND"
@@ -122,7 +123,7 @@ if [ "$PERFORMANCE" == "0" ]; then
   echo "$SCHED_DOWNMIGRATE" > /proc/sys/kernel/sched_downmigrate
   # 小核 提高这个值有利于降低功耗，不利于性能。
   echo "$SCHED_UPMIGRATE" > /proc/sys/kernel/sched_upmigrate
-  if [ "$OPTIMIZE_MODULE" == "0" ]; then
+  if [ "$OPTIMIZE_MODULE" = "0" ]; then
     module_log "- CPU 大核分配: ${SCHED_DOWNMIGRATE}"
     module_log "- CPU 小核分配: ${SCHED_UPMIGRATE}"
   fi
@@ -131,7 +132,7 @@ if [ "$PERFORMANCE" == "0" ]; then
   echo "115000" > /sys/class/thermal/thermal_zone32/trip_point_0_temp
   # CPU 温控 修改为99度
   echo "99000" > /sys/class/thermal/thermal_zone36/trip_point_0_temp
-  if [ "$OPTIMIZE_MODULE" == "0" ]; then
+  if [ "$OPTIMIZE_MODULE" = "0" ]; then
     module_log "- CPU/GPU 温控优化温控已开启"
   fi
 
@@ -146,10 +147,10 @@ if [ "$PERFORMANCE" == "0" ]; then
   echo "$SCHEDTUNE" > /dev/cpuset/asopt/sched_relax_domain_level
   echo "$SCHEDTUNE" > /dev/cpuset/camera-daemon/sched_relax_domain_level
   # 输出负载均衡模式
-  if [ "$OPTIMIZE_MODULE" == "0" ]; then
-    if [ "$SCHEDTUNE" == "1" ]; then
+  if [ "$OPTIMIZE_MODULE" = "0" ]; then
+    if [ "$SCHEDTUNE" = "1" ]; then
       module_log "当前 CPU 负载均衡模式: 核心均衡"
-    elif [ "$SCHEDTUNE" == "2" ]; then
+    elif [ "$SCHEDTUNE" = "2" ]; then
       module_log "当前 CPU 负载均衡模式: 软件均衡"
     fi
   fi
@@ -164,12 +165,12 @@ if [ "$PERFORMANCE" == "0" ]; then
   echo $CPU_SCALING > /sys/devices/system/cpu/cpu7/cpufreq/scaling_governor
   # 将 CPU_SCALING 模式转换为大写字符串并输出
   CPU_SCALING_UPPERCASE=$(echo "$CPU_SCALING" | tr '[:lower:]' '[:upper:]')
-  [ "$OPTIMIZE_MODULE" == "0" ] && module_log "CPU 调度模式为 ${CPU_SCALING_UPPERCASE} 性能模式"
+  [ "$OPTIMIZE_MODULE" = "0" ] && module_log "CPU 调度模式为 ${CPU_SCALING_UPPERCASE} 性能模式"
   # 启用所有离线的 CPU
   for cpu in /sys/devices/system/cpu/cpu*/online; do
-    [ "$(cat "$cpu")" == 0 ] && echo 1 > "$cpu"
+    [ "$(cat "$cpu")" = "0" ] && echo "1" > "$cpu"
   done
-elif [ "$PERFORMANCE" == "1" ]; then
+elif [ "$PERFORMANCE" = "1" ]; then
   # 输出日志
   module_log "当前模式: 省电优先（$PERFORMANCE)"
   # 设置 CPU 应用分配
@@ -183,7 +184,7 @@ elif [ "$PERFORMANCE" == "1" ]; then
   echo "3" > /dev/cpuset/top-app/cpus
 
   # 输出日志
-  if [ "$OPTIMIZE_MODULE" == "0" ]; then
+  if [ "$OPTIMIZE_MODULE" = "0" ]; then
     module_log "正在设置 CPU 应用分配"
     module_log "- 用户的后台应用: $BACKGROUND"
     module_log "- 系统的后台应用: $SYSTEM_BACKGROUND"
@@ -195,7 +196,7 @@ elif [ "$PERFORMANCE" == "1" ]; then
   echo "$SCHED_DOWNMIGRATE" > /proc/sys/kernel/sched_downmigrate
   # 小核 提高这个值有利于降低功耗，不利于性能。
   echo "$SCHED_UPMIGRATE" > /proc/sys/kernel/sched_upmigrate
-  if [ "$OPTIMIZE_MODULE" == "0" ]; then
+  if [ "$OPTIMIZE_MODULE" = "0" ]; then
     module_log "- CPU 大核分配: ${SCHED_DOWNMIGRATE}"
     module_log "- CPU 小核分配: ${SCHED_UPMIGRATE}"
   fi
@@ -211,10 +212,10 @@ elif [ "$PERFORMANCE" == "1" ]; then
   echo "$SCHEDTUNE" > /dev/cpuset/asopt/sched_relax_domain_level
   echo "$SCHEDTUNE" > /dev/cpuset/camera-daemon/sched_relax_domain_level
   # 输出负载均衡模式
-  if [ "$OPTIMIZE_MODULE" == "0" ]; then
-    if [ "$SCHEDTUNE" == "1" ]; then
+  if [ "$OPTIMIZE_MODULE" = "0" ]; then
+    if [ "$SCHEDTUNE" = "1" ]; then
       module_log "当前 CPU 负载均衡模式: 核心均衡"
-    elif [ "$SCHEDTUNE" == "2" ]; then
+    elif [ "$SCHEDTUNE" = "2" ]; then
       module_log "当前 CPU 负载均衡模式: 软件均衡"
     fi
   fi
@@ -229,8 +230,8 @@ elif [ "$PERFORMANCE" == "1" ]; then
   echo "$CPU_SCALING" > /sys/devices/system/cpu/cpu7/cpufreq/scaling_governor
   # 将 CPU_SCALING 模式转换为大写字符串并输出
   CPU_SCALING_UPPERCASE=$(echo "$CPU_SCALING" | tr '[:lower:]' '[:upper:]')
-  [ "$OPTIMIZE_MODULE" == "0" ] && module_log "CPU 调度模式为 ${CPU_SCALING_UPPERCASE} 性能模式"
-elif [ "$PERFORMANCE" == "2" ]; then
+  [ "$OPTIMIZE_MODULE" = "0" ] && module_log "CPU 调度模式为 ${CPU_SCALING_UPPERCASE} 性能模式"
+elif [ "$PERFORMANCE" = "2" ]; then
   module_log "当前模式: 养老模式（$PERFORMANCE)"
 fi
 
@@ -241,7 +242,7 @@ fi
 
 
 
-if [ "$PERFORMANCE" == "0" ]; then
+if [ "$PERFORMANCE" = "0" ]; then
   # CPU 调整
   echo "100" > /dev/stune/schedtune.boost
   echo "100" > /dev/stune/foreground/schedtune.boost
@@ -384,14 +385,14 @@ if [ "$PERFORMANCE" == "0" ]; then
   # 通过DEBUG模式开启 GPU/CPU 加速
   settings put global enable_gpu_debug_layers 0
   settings put system debug.composition.type dyn
-  [ "$OPTIMIZE_MODULE" == "0" ] && module_log "GPU 加速已开启 (启用DEBUG模式)"
+  [ "$OPTIMIZE_MODULE" = "0" ] && module_log "GPU 加速已开启 (启用DEBUG模式)"
   echo "1" > /proc/cpu_loading/debug_enable
   echo "1" > /proc/cpu_loading/uevent_enable
   echo "68" > /proc/cpu_loading/overThrhld
   echo "45" > /proc/cpu_loading/underThrhld
   echo "68" > /proc/cpu_loading/specify_overThrhld
   echo "7654" > /proc/cpu_loading/specify_cpus
-  [ "$OPTIMIZE_MODULE" == "0" ] && module_log "CPU 加速已开启（启用DEBUG模式）"
+  [ "$OPTIMIZE_MODULE" = "0" ] && module_log "CPU 加速已开启（启用DEBUG模式）"
   # GPU 优化
   echo "0" > /sys/class/kgsl/kgsl-3d0/default_pwrlevel
   echo "3" > /sys/class/kgsl/kgsl-3d0/devfreq/adrenoboost
@@ -439,17 +440,17 @@ echo "0" > /proc/sys/kernel/sched_schedstats
 # 禁用F2FS IO统计（安卓 12+）
 echo "0" > /dev/sys/fs/by-name/userdata/iostat_enable
 # 输出简要日志
-[ "$OPTIMIZE_MODULE" == "1" ] && module_log "已开启 CPU / GPU 优化"
+[ "$OPTIMIZE_MODULE" = "1" ] && module_log "已开启 CPU / GPU 优化"
 
 
 # 王者荣耀游戏优化
-if [ "$OPTIMIZE_WZRY" == "1" ]; then
+if [ "$OPTIMIZE_WZRY" = "1" ]; then
   # 开启王者荣耀 O3T 优化
   # 王者荣耀配置文件夹路径
-  [ "$OPTIMIZE_MODULE" == "0" ] && module_log "正在开启王者荣耀 O3T 优化"
+  [ "$OPTIMIZE_MODULE" = "0" ] && module_log "正在开启王者荣耀 O3T 优化"
   SHARED_PREFS="/data/data/com.tencent.tmgp.sgame/shared_prefs"
   if [ ! -d "$SHARED_PREFS" ]; then
-    [ "$OPTIMIZE_MODULE" == "0" ] && module_log "- 未找到王者荣耀配置文件夹"
+    [ "$OPTIMIZE_MODULE" = "0" ] && module_log "- 未找到王者荣耀配置文件夹"
   else
     # 王者荣耀配置文件
     PLAYER_PREFS="$SHARED_PREFS/com.tencent.tmgp.sgame.v2.playerprefs.xml"
@@ -462,17 +463,17 @@ if [ "$OPTIMIZE_WZRY" == "1" ]; then
     <boolean name=\"EnableGPUSkin\"value=\"false\"/>
     <boolean name=\"EnableGLES3\"value=\"false\"/>
 </map>" > $CONFIG
-    [ "$OPTIMIZE_MODULE" == "0" ] && module_log "- 更新王者荣耀 OpenGLES3Config.xml 配置文件"
+    [ "$OPTIMIZE_MODULE" = "0" ] && module_log "- 更新王者荣耀 OpenGLES3Config.xml 配置文件"
     # 删除王者荣耀配置参数
-    sed -i '/.*<int name="VulkanTryCount" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="EnableVulkan" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="EnableGLES3" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="EnableMTR" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="DisableMTR" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="sgame_ALL_HighFPS" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="EnableHWVendorOpt" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="UnityGraphicsQuality" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="EnableGPUReport" value=".*" \/>/'d "$PLAYER_PREFS"
+    sed -i '/.*<int name="VulkanTryCount" value=".*" \/>/d' "$PLAYER_PREFS"
+    sed -i '/.*<int name="EnableVulkan" value=".*" \/>/d' "$PLAYER_PREFS"
+    sed -i '/.*<int name="EnableGLES3" value=".*" \/>/d' "$PLAYER_PREFS"
+    sed -i '/.*<int name="EnableMTR" value=".*" \/>/d' "$PLAYER_PREFS"
+    sed -i '/.*<int name="DisableMTR" value=".*" \/>/d' "$PLAYER_PREFS"
+    sed -i '/.*<int name="sgame_ALL_HighFPS" value=".*" \/>/d' "$PLAYER_PREFS"
+    sed -i '/.*<int name="EnableHWVendorOpt" value=".*" \/>/d' "$PLAYER_PREFS"
+    sed -i '/.*<int name="UnityGraphicsQuality" value=".*" \/>/d' "$PLAYER_PREFS"
+    sed -i '/.*<int name="EnableGPUReport" value=".*" \/>/d' "$PLAYER_PREFS"
     # 更新王者荣耀 O3T 配置参数
     sed -i '2a \ \ \ \ <int name="VulkanTryCount" value="1" \/>' "$PLAYER_PREFS"
     sed -i '3a \ \ \ \ <int name="EnableVulkan" value="3" \/>' "$PLAYER_PREFS"
@@ -483,20 +484,19 @@ if [ "$OPTIMIZE_WZRY" == "1" ]; then
     sed -i '8a \ \ \ \ <int name="EnableHWVendorOpt" value="1" \/>' "$PLAYER_PREFS"
     sed -i '9a \ \ \ \ <int name="UnityGraphicsQuality" value="1" \/>' "$PLAYER_PREFS"
     sed -i '10a \ \ \ \ <int name="EnableGPUReport" value="2" \/>' "$PLAYER_PREFS"
-    [ "$OPTIMIZE_MODULE" == "0" ] && module_log "- 更新王者荣耀配置参数"
+    [ "$OPTIMIZE_MODULE" = "0" ] && module_log "- 更新王者荣耀配置参数"
     chmod 550 $SHARED_PREFS
     chmod 440 $PLAYER_PREFS
-    [ "$OPTIMIZE_MODULE" == "0" ] && module_log "- 更新配置文件权限"
-    [ "$OPTIMIZE_MODULE" == "0" ] && module_log "- 已开启王者荣耀 O3T 优化"
-    [ "$OPTIMIZE_MODULE" == "1" ] && module_log "已开启王者荣耀 O3T 优化"
+    [ "$OPTIMIZE_MODULE" = "0" ] && module_log "- 更新配置文件权限"
+    [ "$OPTIMIZE_MODULE" = "0" ] && module_log "- 已开启王者荣耀 O3T 优化"
+    [ "$OPTIMIZE_MODULE" = "1" ] && module_log "已开启王者荣耀 O3T 优化"
   fi
-elif [ "$OPTIMIZE_WZRY" == "2" ]; then
-  # 开启王者荣耀 O3T 优化
-  # 王者荣耀配置文件夹路径
-  [ "$OPTIMIZE_MODULE" == "0" ] && module_log "正在开启王者荣耀 VT 优化"
+elif [ "$OPTIMIZE_WZRY" = "2" ]; then
+  # 开启王者荣耀 VT 优化
+  [ "$OPTIMIZE_MODULE" = "0" ] && module_log "正在开启王者荣耀 VT 优化"
   SHARED_PREFS="/data/data/com.tencent.tmgp.sgame/shared_prefs"
   if [ ! -d "$SHARED_PREFS" ]; then
-    [ "$OPTIMIZE_MODULE" == "0" ] && module_log "- 未找到王者荣耀配置文件夹"
+    [ "$OPTIMIZE_MODULE" = "0" ] && module_log "- 未找到王者荣耀配置文件夹"
   else
     # 王者荣耀配置文件
     PLAYER_PREFS="$SHARED_PREFS/com.tencent.tmgp.sgame.v2.playerprefs.xml"
@@ -509,18 +509,18 @@ elif [ "$OPTIMIZE_WZRY" == "2" ]; then
     <boolean name=\"EnableGPUSkin\"value=\"false\"/>
     <boolean name=\"EnableGLES3\"value=\"false\"/>
 </map>" > $CONFIG
-    [ "$OPTIMIZE_MODULE" == "0" ] && module_log "- 更新王者荣耀 OpenGLES3Config.xml 配置文件"
-    # 删除王者荣耀配置参数
-    sed -i '/.*<int name="VulkanTryCount" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="EnableVulkan" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="EnableGLES3" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="EnableMTR" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="DisableMTR" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="sgame_ALL_HighFPS" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="EnableHWVendorOpt" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="UnityGraphicsQuality" value=".*" \/>/'d "$PLAYER_PREFS"
-    sed -i '/.*<int name="EnableGPUReport" value=".*" \/>/'d "$PLAYER_PREFS"
-    # 更新王者荣耀 VT 配置参数
+    [ "$OPTIMIZE_MODULE" = "0" ] && module_log "- 更新王者荣耀 OpenGLES3Config.xml 配置文件"
+    # 删除配置参数（修正引号嵌套）
+    sed -i '/.*<int name="VulkanTryCount" value=".*" \/>/d' "$PLAYER_PREFS"
+    sed -i '/.*<int name="EnableVulkan" value=".*" \/>/d' "$PLAYER_PREFS"
+    sed -i '/.*<int name="EnableGLES3" value=".*" \/>/d' "$PLAYER_PREFS"
+    sed -i '/.*<int name="EnableMTR" value=".*" \/>/d' "$PLAYER_PREFS"
+    sed -i '/.*<int name="DisableMTR" value=".*" \/>/d' "$PLAYER_PREFS"
+    sed -i '/.*<int name="sgame_ALL_HighFPS" value=".*" \/>/d' "$PLAYER_PREFS"
+    sed -i '/.*<int name="EnableHWVendorOpt" value=".*" \/>/d' "$PLAYER_PREFS"
+    sed -i '/.*<int name="UnityGraphicsQuality" value=".*" \/>/d' "$PLAYER_PREFS"
+    sed -i '/.*<int name="EnableGPUReport" value=".*" \/>/d' "$PLAYER_PREFS"
+    # 更新 VT 配置参数
     sed -i '2a \ \ \ \ <int name="VulkanTryCount" value="1" \/>' "$PLAYER_PREFS"
     sed -i '3a \ \ \ \ <int name="EnableVulkan" value="2" \/>' "$PLAYER_PREFS"
     sed -i '4a \ \ \ \ <int name="EnableGLES3" value="3" \/>' "$PLAYER_PREFS"
@@ -530,14 +530,14 @@ elif [ "$OPTIMIZE_WZRY" == "2" ]; then
     sed -i '8a \ \ \ \ <int name="EnableHWVendorOpt" value="1" \/>' "$PLAYER_PREFS"
     sed -i '9a \ \ \ \ <int name="UnityGraphicsQuality" value="1" \/>' "$PLAYER_PREFS"
     sed -i '10a \ \ \ \ <int name="EnableGPUReport" value="2" \/>' "$PLAYER_PREFS"
-    [ "$OPTIMIZE_MODULE" == "0" ] && module_log "- 更新王者荣耀配置参数"
+    [ "$OPTIMIZE_MODULE" = "0" ] && module_log "- 更新王者荣耀配置参数"
     chmod 550 $SHARED_PREFS
     chmod 440 $PLAYER_PREFS
-    [ "$OPTIMIZE_MODULE" == "0" ] && module_log "- 更新配置文件权限"
-    [ "$OPTIMIZE_MODULE" == "0" ] && module_log "- 已开启王者荣耀 VT 优化"
-    [ "$OPTIMIZE_MODULE" == "1" ] && module_log "已开启王者荣耀 VT 优化"
+    [ "$OPTIMIZE_MODULE" = "0" ] && module_log "- 更新配置文件权限"
+    [ "$OPTIMIZE_MODULE" = "0" ] && module_log "- 已开启王者荣耀 VT 优化"
+    [ "$OPTIMIZE_MODULE" = "1" ] && module_log "已开启王者荣耀 VT 优化"
   fi
-elif [ "$OPTIMIZE_WZRY" == "3" ]; then
+elif [ "$OPTIMIZE_WZRY" = "3" ]; then
   # 删除更改后的配置, 使用默认配置参数
   SHARED_PREFS="/data/data/com.tencent.tmgp.sgame/shared_prefs"
   if [ -d "$SHARED_PREFS" ]; then
@@ -553,16 +553,16 @@ elif [ "$OPTIMIZE_WZRY" == "3" ]; then
       STATUS_PREFS="VT"
     fi
     if [ $STATUS_PREFS != "none" ]; then
-      # 使用王者荣耀默认配置参数
-      sed -i '/.*<int name="VulkanTryCount" value=".*" \/>/'d "$PLAYER_PREFS"
-      sed -i '/.*<int name="EnableVulkan" value=".*" \/>/'d "$PLAYER_PREFS"
-      sed -i '/.*<int name="EnableGLES3" value=".*" \/>/'d "$PLAYER_PREFS"
-      sed -i '/.*<int name="EnableMTR" value=".*" \/>/'d "$PLAYER_PREFS"
-      sed -i '/.*<int name="DisableMTR" value=".*" \/>/'d "$PLAYER_PREFS"
-      sed -i '/.*<int name="sgame_ALL_HighFPS" value=".*" \/>/'d "$PLAYER_PREFS"
-      sed -i '/.*<int name="EnableHWVendorOpt" value=".*" \/>/'d "$PLAYER_PREFS"
-      sed -i '/.*<int name="UnityGraphicsQuality" value=".*" \/>/'d "$PLAYER_PREFS"
-      sed -i '/.*<int name="EnableGPUReport" value=".*" \/>/'d "$PLAYER_PREFS"
+      # 删除优化参数（修正引号嵌套）
+      sed -i '/.*<int name="VulkanTryCount" value=".*" \/>/d' "$PLAYER_PREFS"
+      sed -i '/.*<int name="EnableVulkan" value=".*" \/>/d' "$PLAYER_PREFS"
+      sed -i '/.*<int name="EnableGLES3" value=".*" \/>/d' "$PLAYER_PREFS"
+      sed -i '/.*<int name="EnableMTR" value=".*" \/>/d' "$PLAYER_PREFS"
+      sed -i '/.*<int name="DisableMTR" value=".*" \/>/d' "$PLAYER_PREFS"
+      sed -i '/.*<int name="sgame_ALL_HighFPS" value=".*" \/>/d' "$PLAYER_PREFS"
+      sed -i '/.*<int name="EnableHWVendorOpt" value=".*" \/>/d' "$PLAYER_PREFS"
+      sed -i '/.*<int name="UnityGraphicsQuality" value=".*" \/>/d' "$PLAYER_PREFS"
+      sed -i '/.*<int name="EnableGPUReport" value=".*" \/>/d' "$PLAYER_PREFS"
       chmod 771 "$SHARED_PREFS"
       chmod 660 "$PLAYER_PREFS"
       module_log "已还原王者荣耀 $STATUS_PREFS 配置, 已更新 config.yaml"
@@ -577,7 +577,7 @@ fi
 
 
 # 关闭 ZRAM 减少性能/磁盘损耗
-if [ "$OPTIMIZE_ZRAM" == "1" ]; then
+if [ "$OPTIMIZE_ZRAM" = "1" ]; then
   swapoff /dev/block/zram0 2>/dev/null
   swapoff /dev/block/zram1 2>/dev/null
   swapoff /dev/block/zram2 2>/dev/null
@@ -592,7 +592,7 @@ fi
 
 
 # TCP 优化
-if [ "$OPTIMIZE_TCP" == "1" ]; then
+if [ "$OPTIMIZE_TCP" = "1" ]; then
   temp_file=$(mktemp)
   echo "
 net.ipv4.ip_forward = 1
@@ -648,23 +648,25 @@ net.ipv6.neigh.default.gc_thresh2=4096
 net.ipv6.neigh.default.gc_thresh1=2048
 net.ipv4.tcp_max_syn_backlog = 262144
 net.netfilter.nf_conntrack_max = 262144
-" > $temp_file
+" > "$temp_file"
   # 给予 sysctl.conf 配置文件权限
-  chmod 777 $temp_file
+  chmod 777 "$temp_file"
   # 启用自定义配置文件
-  sysctl -p $temp_file >/dev/null 2>&1
+  sysctl -p "$temp_file" >/dev/null 2>&1
   # 启用 ip route 配置
-  ip route | while read config; do
-    ip route change $config initcwnd 20;
+  ip route | while read -r config; do
+    ip route change "$config" initcwnd 20;
   done
   # 删除 wlan_logs 网络日志
   rm -rf /data/vendor/wlan_logs
   module_log "已开启 TCP 网络优化"
+  # 删除缓存文件
+  rm -f "$temp_file"
 fi
 
 
 # 快充优化
-if [ "$OPTIMIZE_CHARGE" == "1" ]; then
+if [ "$OPTIMIZE_CHARGE" = "1" ]; then
   chmod 755 /sys/class/power_supply/*/*
   chmod 755 /sys/module/qpnp_smbcharger/*/*
   chmod 755 /sys/module/dwc3_msm/*/*
@@ -716,7 +718,7 @@ fi
 
 # 移除小米更新验证
 # 获取用户配置, 判断配置是否为1
-if [ "$OPTIMIZE_MIUI_OTA" == "1" ]; then
+if [ "$OPTIMIZE_MIUI_OTA" = "1" ]; then
   # 查找 /*/etc/device_features 文件夹及其子文件夹下的所有 *.xml 文件
   times=0
   for dir in /*/etc/device_features; do
@@ -732,7 +734,7 @@ if [ "$OPTIMIZE_MIUI_OTA" == "1" ]; then
           cp -f "$file" "${MODDIR}${dir}/"
           # 修改 OTA 配置文件中的内容
           sed -i 's/"support_ota_validate">true</"support_ota_validate">false</g' "${MODDIR}${dir}/$(basename "$file")"
-          (( times++ ))
+          times=$(( times + 1 ))
         fi
       done
     fi
