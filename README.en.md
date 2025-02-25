@@ -21,7 +21,7 @@ Module logs can be found at:
 After modifying configurations, either reboot your device or click the "Execute" button for All-In-One module in Magisk Manager.
 
 ## Planned Features
-- [ ] Preserve configurations during module updates
+- [x] Preserve configurations during module updates
 - [ ] Develop management app
 
 ## Frequently Asked Questions
