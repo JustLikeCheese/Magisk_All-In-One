@@ -70,18 +70,19 @@ module_log() {
   case "$OPTIMIZE_MODULE" in
     "0" | "1")
       # 输出模块日志
-      if [ "$1" != "1" ]; then
-        # 输出日志到 $LOG_FILE
-        echo "[$(date '+%m-%d %H:%M:%S.%3N')] $1" >> $LOG_FILE
-      else
+      if [ "$OPTIMIZE_DEBUG" = "DEBUG" ]; then
         # 输出日志到控制台
         echo "[$(date '+%m-%d %H:%M:%S.%3N')] $1"
+      else
+        # 输出日志到 $LOG_FILE
+        echo "[$(date '+%m-%d %H:%M:%S.%3N')] $1" >> "$LOG_FILE"
       fi
       ;;
     "2")
       # 只输出 Ciallo～(∠・ω< )⌒☆!
-      if [[ "$1" != Ciallo* ]]; then return; fi
-      echo "[$(date '+%m-%d %H:%M:%S.%3N')] $1" >> $LOG_FILE
+      case "$1" in Ciallo*) 
+        echo "[$(date '+%m-%d %H:%M:%S.%3N')] $1" >> "$LOG_FILE"
+        ;;esac
       ;;
     "3")
       # 禁用模块日志功能
@@ -97,7 +98,7 @@ module_log "开机完成，正在读取 config.yaml 配置.."
 # 优化 CPU 核心分配
 if [ "$PERFORMANCE" == "0" ]; then
   # 输出日志
-  module_log "当前模式: 性能优先（$PERFORMANCE）"
+  module_log "当前模式: 性能优先（$PERFORMANCE)"
   # 设置 CPU 应用分配
   # 用户后台应用
   echo "$BACKGROUND" > /dev/cpuset/background/cpus
@@ -170,7 +171,7 @@ if [ "$PERFORMANCE" == "0" ]; then
   done
 elif [ "$PERFORMANCE" == "1" ]; then
   # 输出日志
-  module_log "当前模式: 省电优先（$PERFORMANCE）"
+  module_log "当前模式: 省电优先（$PERFORMANCE)"
   # 设置 CPU 应用分配
   # 用户后台应用
   echo "0" > /dev/cpuset/background/cpus
@@ -230,7 +231,7 @@ elif [ "$PERFORMANCE" == "1" ]; then
   CPU_SCALING_UPPERCASE=$(echo "$CPU_SCALING" | tr '[:lower:]' '[:upper:]')
   [ "$OPTIMIZE_MODULE" == "0" ] && module_log "CPU 调度模式为 ${CPU_SCALING_UPPERCASE} 性能模式"
 elif [ "$PERFORMANCE" == "2" ]; then
-  module_log "当前模式: 养老模式（$PERFORMANCE）"
+  module_log "当前模式: 养老模式（$PERFORMANCE)"
 fi
 
 
