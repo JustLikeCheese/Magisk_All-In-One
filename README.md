@@ -10,6 +10,10 @@
 ![GitHub Release](https://img.shields.io/github/v/release/JustLikeCheese/Magisk_All-In-One)
 [![License](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
+## 赞助
+
+![d3aa987fe9652c79f0fecfd2c6be61de](https://github.com/user-attachments/assets/e35379f5-0e5a-49c7-812f-75f2a701811e)
+
 ## 模块功能 / Function
 模块集成了大部分优化功能，CPU 优化 / CPU 自动调控 / GPU 优化 / 提升存储空间读写速度等功能。详细可自行查看 system.prop 文件以及 service.sh 文件。
 
